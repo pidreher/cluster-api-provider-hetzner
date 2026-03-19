@@ -19,6 +19,7 @@ package remediation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -160,6 +161,11 @@ func (s *Service) handlePhaseWaiting(ctx context.Context) (res reconcile.Result,
 func (s *Service) findServer(ctx context.Context) (*hcloud.Server, error) {
 	serverID, err := s.scope.ServerIDFromProviderID()
 	if err != nil {
+		if errors.Is(err, hcloudutil.ErrNilProviderID) {
+			// A nil providerID means that the server hasn't been created yet.
+			// Stop remediation.
+			return nil, nil
+		}
 		return nil, fmt.Errorf("failed to get serverID from providerID: %w", err)
 	}
 
