@@ -166,6 +166,9 @@ func (r *HCloudMachineReconciler) Reconcile(ctx context.Context, req reconcile.R
 	defer func() {
 		if reterr != nil && errors.Is(reterr, hcloudclient.ErrUnauthorized) {
 			conditions.MarkFalse(hcloudMachine, infrav1.HCloudTokenAvailableCondition, infrav1.HCloudCredentialsInvalidReason, clusterv1.ConditionSeverityError, "wrong hcloud token")
+			// Don't return an error, no point retrying with invalid credentials.
+			reterr = nil
+			res = reconcile.Result{}
 		} else {
 			conditions.MarkTrue(hcloudMachine, infrav1.HCloudTokenAvailableCondition)
 		}
