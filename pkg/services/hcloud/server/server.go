@@ -127,7 +127,14 @@ func (s *Service) Reconcile(ctx context.Context) (res reconcile.Result, err erro
 					hcloudutil.HandleRateLimitExceeded(s.scope.HCloudMachine, err, "findServer")
 					return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 				}
-				return reconcile.Result{}, nil
+				// HCloudMachine is ready so we skip setting a misleading rate-limit condition.
+				// However, we still requeue so that any stale error conditions (e.g. ServerCreateSucceeded=False
+				// left over from a previous rate-limit storm) can be cleared once the rate limit lifts.
+				s.scope.Info("rate limit exceeded during findServer, requeueing to clear stale conditions",
+					"namespace", s.scope.HCloudMachine.Namespace,
+					"name", s.scope.HCloudMachine.Name,
+				)
+				return reconcile.Result{RequeueAfter: 5 * time.Minute}, nil
 			}
 
 			return reconcile.Result{}, fmt.Errorf("findServer: %w", err)
